@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment
+.env
+.env.*
+
+# Data and results (optional, keep if you want to exclude generated files)
+results/
+*.csv
+
+# OS
+.DS_Store 
