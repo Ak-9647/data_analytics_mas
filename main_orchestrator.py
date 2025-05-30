@@ -1,6 +1,9 @@
 import asyncio
+from dotenv import load_dotenv # Load environment variables from .env file
 from google.adk.agents import SequentialAgent # For orchestration
-from google.adk.agents.invocation_context import InvocationContext # For managing run context and state
+from google.adk.events import Event
+from google.adk.sessions import InMemorySessionService
+from google.adk import Runner
 
 # Import our custom agent classes
 from agents.data_collector_agent import DataCollectorAgent
@@ -23,14 +26,15 @@ sample_df = pd.DataFrame({
 sample_df.to_csv("data/sample_sales_data.csv", index=False)
 # This ensures the tutorial is runnable out-of-the-box, a key for good learner experience.
 
+# Load environment variables from .env file
+load_dotenv()
+
 async def main():
     # Initialize agents
     data_collector = DataCollectorAgent(name="DataCollector")
     preprocessor = DataPreprocessorAgent(name="Preprocessor")
-    # Specify model names; ensure these are valid for your setup
-    gemini_analyst = GeminiAnalystAgent(name="GeminiAnalyst", model_name="gemini-1.5-flash-001") 
-    openai_analyst = OpenAiAnalystAgent(name="OpenAIAnalyst", model_name="openai/gpt-4o-mini") # LiteLLM format
-
+    gemini_analyst = GeminiAnalystAgent(name="GeminiAnalyst", model_name="gemini-1.5-flash") 
+    openai_analyst = OpenAiAnalystAgent(name="OpenAIAnalyst", model_name="gpt-4o-mini")
     visualizer = VisualizationAgent(name="Visualizer")
 
     # Define the pipeline using SequentialAgent
@@ -45,33 +49,63 @@ async def main():
         ]
     )
 
-    # Create an InvocationContext to manage state across the pipeline
-    ctx = InvocationContext.create(user_id="tutorial_user", app_name="ADKDataAnalyticsMAS")
+    # Set up the Runner and session service
+    app_name = "ADKDataAnalyticsMAS"
+    session_service = InMemorySessionService()
+    runner = Runner(
+        app_name=app_name,
+        agent=pipeline,
+        session_service=session_service
+    )
+
+    user_id = "tutorial_user"
+    session_id = "demo-session-001"
+
+    # Create the session before running the pipeline
+    await session_service.create_session(
+        app_name=app_name,
+        user_id=user_id,
+        session_id=session_id
+    )
+
+    print(f"Starting Data Analytics Multi-Agent Pipeline for user '{user_id}', session '{session_id}'...\n")
     
-    print("Starting Data Analytics Multi-Agent Pipeline...\n")
-    # Execute the pipeline
-    async for event in pipeline.run_async(ctx):
-        author = event.author if event.author else "System" # Agent name or system
-        for part in event.parts: # Events can have multiple parts (text, function_call, etc.)
-            if part.text:
-                 print(f"[{author}]: {part.text}")
-            # In more complex scenarios, you might inspect event.actions for state changes, etc.
+    # Try with None to see if pipeline can start without initial message
+    print(f"📨 Starting pipeline without initial message")
     
-    print("\nPipeline finished.")
-    print("\n--- Final Analysis & Visualization Summary ---")
-    if ctx.session.state.get("gemini_analysis"):
-        print("\nGemini Analyst Findings:")
-        print(ctx.session.state["gemini_analysis"])
-    if ctx.session.state.get("openai_analysis"):
-        print("\nOpenAI Analyst Findings:")
-        print(ctx.session.state["openai_analysis"])
-    if ctx.session.state.get("visualization_paths"):
-        print("\nVisualizations Generated:")
-        for path in ctx.session.state["visualization_paths"]:
-            print(f"Plot saved at: {path}")
+    async for event in runner.run_async(
+        user_id=user_id,
+        session_id=session_id,
+        new_message=None
+    ):
+        author = getattr(event, 'author', 'System')
+        for part in getattr(event, 'parts', []):
+            if getattr(part, 'text', None):
+                print(f"[{author}]: {part.text}")
+        if getattr(event, 'is_final_response', False):
+            print("\nPipeline finished.")
+            if getattr(event, 'parts', None):
+                print("\n--- Final Analysis & Visualization Summary ---")
+                for part in event.parts:
+                    if getattr(part, 'text', None):
+                        print(part.text)
+
+    # Optionally, inspect the session state after the run
+    final_session = await session_service.get_session(
+        app_name=app_name, user_id=user_id, session_id=session_id
+    )
+    if final_session:
+        print("\n📋 Final Session State:")
+        for key, value in final_session.state.items():
+            if isinstance(value, str) and len(value) > 200:
+                print(f"  {key}: {value[:200]}... (truncated)")
+            else:
+                print(f"  {key}: {value}")
+    else:
+        print("Could not retrieve final session.")
 
 if __name__ == "__main__":
-    # Ensure API keys and cloud configurations are set in your environment
-    # e.g., os.environ["OPENAI_API_KEY"] = "your-key"
-    # For Google Cloud, run `gcloud auth application-default login`
+    # Ensure API keys are set in your .env file or environment variables
+    # GOOGLE_AI_API_KEY: Get from https://aistudio.google.com/
+    # OPENAI_API_KEY: Get from https://platform.openai.com/account/api-keys
     asyncio.run(main())

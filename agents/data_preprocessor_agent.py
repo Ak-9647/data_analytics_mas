@@ -1,6 +1,9 @@
-from google.adk.agents import BaseAgent, Event
+from google.adk.agents import BaseAgent
+from google.adk.events import Event
 from google.adk.agents.invocation_context import InvocationContext
+from google.genai.types import Content, Part # For creating proper content
 import pandas as pd
+from io import StringIO # For pandas JSON reading
 from typing import AsyncGenerator
 
 class DataPreprocessorAgent(BaseAgent):
@@ -14,26 +17,31 @@ class DataPreprocessorAgent(BaseAgent):
         if not raw_data_json:
             error_msg = "Error: Raw data not found in state for preprocessing."
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True)
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True)
             return # Stop if critical data is missing
 
         try:
-            df = pd.read_json(raw_data_json, orient="records")
+            # Fix pandas warning by using StringIO
+            df = pd.read_json(StringIO(raw_data_json), orient="records")
             
             # Example preprocessing steps:
-            # Handle missing values (simple fill with 0 for numeric columns for demo)
-            for col in df.select_dtypes(include=['number']).columns:
-                df[col].fillna(0, inplace=True)
+            # Handle missing values (proper way without warnings)
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            df[numeric_cols] = df[numeric_cols].fillna(0)
+            
             # Ensure 'Date' column is in datetime format
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'])
-            # Add more relevant preprocessing steps here based on actual data needs
-            # (e.g., removing duplicates, feature engineering, text cleaning if applicable)
+            
+            print(f"[{agent_name}]: Processed {len(df)} rows of data")
 
             # Store the processed data back into session state for the next agents
             ctx.session.state["processed_data_json"] = df.to_json(orient="records")
-            yield self.create_event(parts=[{"text": "Data preprocessing complete. Processed data stored in state."}])
+            content = Content(parts=[Part(text="Data preprocessing complete. Processed data stored in state.")])
+            yield Event(content=content, author=agent_name)
         except Exception as e:
             error_msg = f"Error during data preprocessing: {str(e)}"
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True) 
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True) 

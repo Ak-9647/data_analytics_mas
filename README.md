@@ -1,75 +1,63 @@
-# Data Analytics Multi-Agent System (ADK)
+# Data Analytics Multi-Agent System (MAS)
 
-This project demonstrates a modular, multi-agent data analytics pipeline using Google ADK, Vertex AI (Gemini), OpenAI (via LiteLLM), and Python data science tools. It is based on the step-by-step coding demo from the referenced video.
+A powerful multi-agent system built with Google ADK that performs end-to-end data analytics using AI agents.
 
-## Project Structure
+## Architecture
 
+The system consists of 5 specialized agents working in sequence:
+
+1. **DataCollectorAgent** - Loads and ingests data from CSV files
+2. **DataPreprocessorAgent** - Cleans and prepares data for analysis  
+3. **GeminiAnalystAgent** - Performs trend analysis using Google's Gemini AI
+4. **OpenAiAnalystAgent** - Conducts anomaly detection using OpenAI's GPT models
+5. **VisualizationAgent** - Creates charts and visualizations with AI insights
+
+## Setup
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
 ```
-├── main_orchestrator.py         # Main pipeline orchestrator
-├── agents/                      # All agent classes
-│   ├── data_collector_agent.py
-│   ├── data_preprocessor_agent.py
-│   ├── google_llm_analyst_agent.py
-│   ├── openai_llm_analyst_agent.py
-│   └── visualization_agent.py
-├── data/                        # Input data (sample CSV auto-generated)
-├── results/                     # Output plots/images
-├── requirements.txt             # Python dependencies
-├── .env.example                 # Example environment variables
-├── .gitignore                   # Git ignore rules
-└── README.md                    # This file
+
+### 2. Configure API Keys
+
+Create a `.env` file in the project root:
+
+```bash
+# Google AI Studio API Key (get from https://aistudio.google.com/)
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+
+# OpenAI API Key (get from https://platform.openai.com/account/api-keys)
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-## Setup Instructions
+### 3. Run the System
+```bash
+python main_orchestrator.py
+```
 
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/Ak-9647/data_analytics_mas.git
-   cd data_analytics_mas
-   ```
+## Features
 
-2. **Install dependencies:**
-   ```sh
-   python3 -m pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables:**
-   - Copy `.env.example` to `.env` and add your OpenAI API key:
-     ```sh
-     cp .env.example .env
-     # Edit .env and set OPENAI_API_KEY=your-openai-api-key
-     ```
-   - Authenticate with Google Cloud for Vertex AI:
-     ```sh
-     gcloud auth application-default login
-     # Make sure Vertex AI API is enabled in your GCP project
-     ```
-
-4. **Run the pipeline:**
-   ```sh
-   python3 main_orchestrator.py
-   ```
-
-## What This Does
-- **DataCollectorAgent:** Loads sample sales data from CSV.
-- **DataPreprocessorAgent:** Cleans and preprocesses the data.
-- **GeminiAnalystAgent:** Uses Google Vertex AI Gemini to analyze trends.
-- **OpenAiAnalystAgent:** Uses OpenAI (via LiteLLM) to find anomalies.
-- **VisualizationAgent:** Generates and saves plots, embedding LLM insights in chart titles.
+- ✅ **Multi-Agent Architecture** - Specialized agents for different analytics tasks
+- ✅ **AI-Powered Analysis** - Real insights from Gemini and OpenAI models  
+- ✅ **Professional Visualizations** - Charts with embedded AI insights
+- ✅ **Robust Error Handling** - Graceful fallbacks and comprehensive logging
+- ✅ **Extensible Design** - Easy to add new agents or data sources
 
 ## Output
-- Console output shows progress and LLM findings.
-- Plots are saved in the `results/` directory.
 
-## Notes
-- The sample data is auto-generated for demo purposes.
-- Ensure your Google Cloud project has billing enabled and Vertex AI API is active.
-- The `.env` file is excluded from git for security.
+The system generates:
+- **Analysis Reports** - Trend analysis and anomaly detection
+- **Visualizations** - Professional charts in the `results/` directory
+- **Session State** - Complete pipeline execution logs
 
-## Requirements
-- Python 3.10+
-- Google Cloud CLI (`gcloud`)
-- OpenAI API key
+## Sample Data
 
-## License
-MIT 
+The system includes sample sales data for demonstration. In production, replace with your own data sources.
+
+## API Requirements
+
+- **Google AI Studio API** - Simple API key approach (no GCP setup required)
+- **OpenAI API** - Standard OpenAI API access
+
+No complex cloud authentication or Vertex AI setup needed! 

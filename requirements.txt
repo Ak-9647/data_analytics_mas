@@ -1,7 +1,21 @@
+# Data Analytics Multi-Agent System (MAS) Requirements
+
+# Core Google ADK framework
 google-adk
-google-cloud-aiplatform
+
+# Google AI Studio API (simpler than Vertex AI)
+google-generativeai
+
+# OpenAI API
 openai
-litellm
+
+# Data science libraries
 pandas
 matplotlib
 seaborn
+
+# Environment variables
+python-dotenv
+
+# Optional: For advanced LLM routing (if needed)
+# litellm

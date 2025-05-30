@@ -1,6 +1,9 @@
-from google.adk.agents import BaseAgent, Event
+from google.adk.agents import BaseAgent
+from google.adk.events import Event
 from google.adk.agents.invocation_context import InvocationContext
+from google.genai.types import Content, Part # For creating proper content
 import pandas as pd
+from io import StringIO # For pandas JSON reading
 import matplotlib.pyplot as plt
 import seaborn as sns # For more aesthetic plots
 import os # To ensure results directory exists and for path handling
@@ -19,11 +22,13 @@ class VisualizationAgent(BaseAgent):
         if not processed_data_json:
             error_msg = "Error: Processed data not found in state for visualization."
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True)
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True)
             return
 
         try:
-            df = pd.read_json(processed_data_json, orient="records")
+            # Fix pandas warning by using StringIO
+            df = pd.read_json(StringIO(processed_data_json), orient="records")
             # Ensure 'Date' is datetime for proper plotting
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'])
@@ -47,13 +52,15 @@ class VisualizationAgent(BaseAgent):
             plt.savefig(sales_plot_path)
             plt.close() # Close the plot to free memory
             plot_paths.append(sales_plot_path)
-            yield self.create_event(parts=[{"text": f"Sales revenue plot saved to {sales_plot_path}"}])
+            content = Content(parts=[Part(text=f"Sales revenue plot saved to {sales_plot_path}")])
+            yield Event(content=content, author=agent_name)
 
             # --- Plot 2: Total Revenue by Product Name ---
             if 'Product_Name' in df.columns and 'Revenue' in df.columns:
                 plt.figure(figsize=(10, 7))
                 product_revenue = df.groupby('Product_Name')['Revenue'].sum().sort_values(ascending=False)
-                sns.barplot(x=product_revenue.index, y=product_revenue.values, palette="viridis")
+                # Fix seaborn warning by properly setting hue
+                sns.barplot(x=product_revenue.index, y=product_revenue.values, hue=product_revenue.index, palette="viridis", legend=False)
                 plt.title(f"Total Revenue by Product\n(OpenAI Anomaly Note: {openai_analysis[:70]}...)")
                 plt.xlabel("Product Name")
                 plt.ylabel("Total Revenue ($)")
@@ -63,13 +70,17 @@ class VisualizationAgent(BaseAgent):
                 plt.savefig(product_plot_path)
                 plt.close()
                 plot_paths.append(product_plot_path)
-                yield self.create_event(parts=[{"text": f"Product revenue plot saved to {product_plot_path}"}])
+                content = Content(parts=[Part(text=f"Product revenue plot saved to {product_plot_path}")])
+                yield Event(content=content, author=agent_name)
             
             # Store paths to generated visualizations in state
             ctx.session.state["visualization_paths"] = plot_paths
-            yield self.create_event(parts=[{"text": "Visualizations generated successfully."}], is_final_response=True)
+            print(f"[{agent_name}]: Generated {len(plot_paths)} visualizations")
+            content = Content(parts=[Part(text="Visualizations generated successfully.")])
+            yield Event(content=content, author=agent_name, turn_complete=True)
 
         except Exception as e:
             error_msg = f"Error during visualization generation: {str(e)}"
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True) 
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True) 

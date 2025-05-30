@@ -1,5 +1,7 @@
-from google.adk.agents import BaseAgent, Event # Core ADK classes
+from google.adk.agents import BaseAgent # Core ADK classes
+from google.adk.events import Event # Correct Event import for ADK
 from google.adk.agents.invocation_context import InvocationContext # For state and context
+from google.genai.types import Content, Part # For creating proper content
 import pandas as pd # For data manipulation
 from typing import AsyncGenerator # For async generator type hint
 
@@ -17,15 +19,16 @@ class DataCollectorAgent(BaseAgent):
             # This makes it accessible to the next agent in the pipeline.
             ctx.session.state["raw_data_json"] = df.to_json(orient="records")
             
-            # Yield an event to indicate successful completion of this agent's task.
-            # Events are how agents communicate their progress/results back to the orchestrator/runner.
-            yield self.create_event(parts=[{"text": "Data collection complete. Raw data loaded and stored in state."}])
+            # Create proper Event with Content
+            content = Content(parts=[Part(text="Data collection complete. Raw data loaded and stored in state.")])
+            yield Event(content=content, author=agent_name)
         except FileNotFoundError:
             error_msg = f"Error: sample_sales_data.csv not found. Make sure it's in the 'data' directory."
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True)
-            # is_final_response=True can signal the pipeline to stop if critical error.
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True)
         except Exception as e:
             error_msg = f"Error during data collection: {str(e)}"
             print(f"[{agent_name}]: {error_msg}")
-            yield self.create_event(parts=[{"text": error_msg}], is_final_response=True) 
+            content = Content(parts=[Part(text=error_msg)])
+            yield Event(content=content, author=agent_name, turn_complete=True) 
