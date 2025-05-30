@@ -1,0 +1,7 @@
+google-adk
+google-cloud-aiplatform
+openai
+litellm
+pandas
+matplotlib
+seaborn
